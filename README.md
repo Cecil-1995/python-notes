@@ -255,8 +255,147 @@ def person(name, age, *, city='Beijing', job):
 * 尾递归是指，在函数返回的时候，调用自身本身，并且，return语句不能包含表达式
 # 三、高级特性
 ## 1. 切片
+* 取一个 list 或 tuple 的部分元素
+* ``L[0:3]``表示，从索引 0 开始取，直到索引 3 为止，但不包括索引 3。即索引 0，1，2，正好是 3 个元素
+* 如果第一个索引是 0，则可以省略
+* 倒数第一个的索引为 -1，使用负数时表示倒数切片，同理 -1 可以省略
+* ``L[0:10:step]``表示取出前十个元素中每隔 step 的元素
+* ``L[:]``表示复制一个 L
+* 字符串``'xxx'``也可以看成是一种 list，每个元素就是一个字符
 ## 2. 迭代
+* 默认情况下，dict迭代的是key。如果要迭代value，可以用for value in d.values()，如果要同时迭代key和value，可以用for k, v in d.items()
+* 字符串也可以进行迭代。``for ch in 'ABC':``
+* 通过 collections 模块的 Iterable 类型可以判断是否为可迭代对象
+```python
+>>> from collections import Iterable
+>>> isinstance('abc', Iterable) # str是否可迭代
+True
+>>> isinstance([1,2,3], Iterable) # list是否可迭代
+True
+>>> isinstance(123, Iterable) # 整数是否可迭代
+False
+```
+* ``enumerate(list)``函数可以把一个list变成索引-元素对，这样就可以在 for 循环中同时迭代索引和元素本身
+```python
+>>> for i, value in enumerate(['A', 'B', 'C']):
+...     print(i, value)
+...
+0 A
+1 B
+2 C
+```
 ## 3. 列表生成式
+* 用来创建 list 的生成式
+* 要生成``list[1, 2, 3, 4, 5, 6, 7, 8, 9, 10]``可以用``list(range(1, 11))``
+* ``[x * x for x in range(1, 11)]``用来生成``[1x1, 2x2, 3x3, ..., 10x10]``，即``[1, 4, 9, 16, 25, 36, 49, 64, 81, 100]``
+* ``[要生成的元素 for 迭代元素 in 迭代对象 if 元素满足条件]``
+* 还可以使用两层循环，可以生成全排列：
+```python
+>>> [m + n for m in 'ABC' for n in 'XYZ']
+['AX', 'AY', 'AZ', 'BX', 'BY', 'BZ', 'CX', 'CY', 'CZ']
+```
 ## 4. 生成器
+* 一边循环一边计算的机制，称为生成器：``generator``
+* 只要把一个列表生成式的 [] 改成 ()，就创建了一个 generator:
+```python
+>>> L = [x * x for x in range(10)]
+>>> L
+[0, 1, 4, 9, 16, 25, 36, 49, 64, 81]
+>>> g = (x * x for x in range(10))
+>>> g
+<generator object <genexpr> at 0x1022ef630>
+```
+* 通过``next(generator)``函数 generator 的下一个返回值，或者也可以直接使用 for 循环进行迭代
+* 如果一个函数定义中包含 yield 关键字，那么这个函数就不再是一个普通函数，而是一个 generator
+* 函数是顺序执行，遇到 return 语句或者最后一行函数语句就返回。而变成 generator 的函数，在每次调用 next() 的时候执行，遇到 yield 语句返回，再次执行时从上次返回的 yield 语句处继续执行
+* 用 for 循环调用 generator 时，拿不到 generator 的 return 语句的返回值。如果想要拿到返回值，必须捕获 StopIteration 错误，返回值包含在 StopIteration 的 value 中
 ## 5. 迭代器
+* 可以被 next() 函数调用并不断返回下一个值的对象称为迭代器：Iterator。它们表示一个惰性计算的序列
+* 生成器都是Iterator对象，但 list、dict、str 虽然是 Iterable，却不是 Iterator
+* 把 list、dict、str 等 Iterable 变成 Iterator 可以使用 iter() 函数
+* 凡是可作用于 for 循环的对象都是 Iterable 类型
 
+# 四、函数式编程
+## 1. 高阶函数
+* 把函数作为参数传入，这样的函数称为高阶函数，函数式编程就是指这种高度抽象的编程范式
+### map/reduce
+* ``map(function,Iterable)``，对序列的每个元素执行 function 函数
+* reduce 把一个函数作用在一个序列[x1, x2, x3, ...]上，这个函数必须接收两个参数，reduce 把结果继续和序列的下一个元素做累积计算，比如：
+```python
+reduce(f, [x1, x2, x3, x4]) = f(f(f(x1, x2), x3), x4)
+```
+### filter
+* ``filter(function,Iterable)``，对序列的每个元素执行 function 函数，只返回为 True 的元素
+### sorted
+* ``sorted(list)``，从小到大排序
+* ``sorted(list， k=abs)``，按照元素的绝对值从小到大排序，abs 是个函数
+* 默认情况下，对字符串排序，是按照ASCII的大小比较的
+* 对字符串忽略大小写进行排序。``sorted(['bob', 'about', 'Zoo', 'Credit'], key=str.lower)``
+* 反向排序。加上第三个参数reverse，``sorted(['bob', 'about', 'Zoo', 'Credit'], key=str.lower, reverse=True)``
+## 2. 返回函数
+* A函数里面定义B函数，A函数最后 return B函数，调用A函数时返回函数，需要再次调用这个函数
+* 返回函数不要引用任何循环变量，或者后续会发生变化的变量。（因为不是立即执行的）
+## 3. 匿名函数
+* ``lambda x: x * x``就是一个匿名函数，冒号前面的 x 表示函数参数
+## 4. 装饰器
+* 函数对象有一个``__name__``属性，可以拿到函数的名字
+* 在代码运行期间动态增加功能的方式，称之为“装饰器”（Decorator）
+* @语法
+## 5. 偏函数
+* 用来修改固定函数参数的默认值，返回一个新的函数
+* ``functools.partial``
+# 五、模块
+* 一个.py文件就成为一个模块（Module）
+* 按目录来组织模块的方法称为包（Package），之后每个模块名之前都加上这个包名。``package.module``
+* 每个包的目录下面都必须包含一个``__init__.py``文件，可以为空，也可以有代码，本身就是一个模块，模块名就是这个报名
+* 通过在交互环境下执行``import abc``，可以检测系统是否已经存在 abc 模块
+* 任何模块代码的第一个字符串都被视为模块的文档注释
+* ``__author__``变量表示作者，``__doc__``也可以用来表示文档注释
+* ``sys``模块的``argv``变量用来保存命令行的所有参数
+* 命令行运行模块式，``__name__``变量被置为``__main__``
+* 类似``_xxx``和``__xxx``这样的函数或变量就是非公开的（private），**不应该**被直接引用。是**不应该**，不是**不能**
+* 安装第三方模块，是通过包管理工具``pip``完成的
+* [Anaconda](https://www.anaconda.com/)
+* 搜索路径存在 sys 模块的 path 变量中
+* 需要添加自己的搜索路径时，可以直接使用``sys.path.append('')``进行添加（运行时修改，运行结束失效）。也可以设置环境变量``PYTHONPATH``
+
+# 六、面向对象编程
+* 类型通常是大写开头的单词
+```python
+class Student(object):
+    pass
+```
+object表示继承的类
+* ``__init__``函数在对象初始化的时候执行，第一个参数``self``表示本身
+* 类中定义的函数第一个参数永远是实例变量``self``
+* __开头的变量为私有变量，只有内部才能访问（其实Python解释器把这个变量改成了``_类名__变量名``，所以其实可以通过``_类名__变量名``来访问这个变量，不同版本的解释器，名字可能不一样）
+* ``file-like objec``鸭子类型，当某个方法需要某种类型的对象作为参数时，并不一定非要这种类型的对象才可以，只要这个对象有相应的方法就可以了（动态语言）
+* ``type()``返回对应的类型
+* types 模块，``types.FunctionType`` ``types.BuiltinFunctionType`` ``types.LambdaType`` ``types.GeneratorType``
+* 如果要获得一个对象的所有属性和方法，可以使用``dir()``函数，它返回一个包含字符串的 list。``__xxx__``属性或者方法在调用时除了使用``'ABC.__xxx__()'``还可以直接使用``xxx('ABC')``，自己写的类，也可以定义成``__xxx__``形式
+* ``hasattr(obj, 'x') # 有属性'x'吗`` ``setattr(obj, 'y', 19) # 设置一个属性'y'`` ``getattr(obj, 'y', default) # 获取属性'y'``
+* 实例属性优先级高于类属性
+* 使用``del s.name``删除实例 s 的 name 属性
+
+# 七、面向对象高级编程
+* 可以给实例绑定属性或者方法
+* ``__slots__``变量限制实例添加的属性，对于继承的子类不起作用
+```python
+ __slots__ = ('name', 'age') # 用tuple定义允许绑定的属性名称
+```
+* ``@property``装饰器获取属性值，``@attr.setter``设置属性值
+* 多重继承，集成多个父类，从而拥有多个父类的所有方法。这种设计称为``MixIn``
+* ``__str__()``方法，``__repr__()``方法
+* ``__iter__()``方法返回一个迭代对象，使类可以使用``for...in..``循环
+* ``__getitem__()``方法使像 list 那样，可以按照下标取出元素
+* ``__setitem__()``方法，把对象视作 list 或 dict 来对集合赋值
+* ``__delitem__``方法，用于删除某个元素
+* ``__getattr__()``方法，动态返回一个属性
+* ``__call__()``方法，对实例本身进行调用
+* ``Callable()``判断一个对象能否被调用
+* 枚举类``Enum``，``@unique``装饰器检查保证没有重复值
+* ``type()``函数可以查看一个类型或变量的类型
+* ``type()``函数既可以返回一个对象的类型，又可以创建出新的类型
+* ``metaclass``元类允许你创建类或者修改类
+# 八、错误、调试和测试
+## 1. 错误处理
