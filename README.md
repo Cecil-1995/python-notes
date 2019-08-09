@@ -399,3 +399,254 @@ object表示继承的类
 * ``metaclass``元类允许你创建类或者修改类
 # 八、错误、调试和测试
 ## 1. 错误处理
+* ``try...except...finally...``，可以在``except``语句块后面加一个``else``表示当没有错误发生时执行
+* [常见的错误和继承关系](https://docs.python.org/3/library/exceptions.html#exception-hierarchy)
+* ``logging``模块的``logging.exception(e)``用来记录错误信息，但程序打印完错误信息后会继续执行，并正常退出
+* ``raise``语句可以抛出一个错误实例
+## 2. 调试
+* 使用``print()``打印
+* ``assert 表达式, '错误信息'``，表达式为False时，抛出``AssertionError``错误。启动时加上参数``-O``关闭 assert。``python -O err.py``
+* ``logging``
+* Python 的调试器``pdb``
+* ``pdb.set_trace()``
+## 3. 单元测试
+## 4. 文档测试
+* python 内置的 doctest 模块可以自动提取 '''xxx'''注释中的代码并执行测试
+# 九、IO 编程
+## 1. 文件读写
+* ``open(文件, 模式, encoing, errors)``打开一个文件
+* ``read()``读取文件所有内容
+* ``close()``关闭文件
+* ``with``语句用法
+```python
+with open('/path/to/file', 'r') as f:
+    print(f.read())
+```
+* ``read(size)``每次读取 size 字节内容
+* ``readline()``每次读取一行内容
+* ``readlines()``一次性读取所有内容并按行返回 list
+* ``write()``写文件
+* ``r``读文件，``rb``读二进制文件，``w``写文件，``wb``写二进制文件，``a``追加
+## 2. StringIO 和 BytesIO
+* 先创建``StringIO``对象，然后``write``写内容，``getvalue()``获取写入后的 str
+* 也可以
+```python
+>>> from io import StringIO
+>>> f = StringIO('Hello!\nHi!\nGoodbye!')
+>>> while True:
+...     s = f.readline()
+...     if s == '':
+...         break
+...     print(s.strip())
+...
+Hello!
+Hi!
+Goodbye!
+```
+* ``BytesIO``和``StringIO``一样，只不过是前者操作二进制数据，后者操作 str
+## 3. 操作文件和目录
+* ``os``模块，``os.name``返回操作系统类型，``os.environ``操作系统的环境变量，``os.environ.get('key')``获取环境变量的值
+```python
+# 查看当前目录的绝对路径:
+>>> os.path.abspath('.')
+'/Users/michael'
+# 在某个目录下创建一个新目录，首先把新目录的完整路径表示出来:
+# os.path.split(),拆分路径。os.path.split()，合并路径
+>>> os.path.join('/Users/michael', 'testdir')
+'/Users/michael/testdir'
+# 然后创建一个目录:
+>>> os.mkdir('/Users/michael/testdir')
+# 删掉一个目录:
+>>> os.rmdir('/Users/michael/testdir')
+```
+* ``os.path.splitext()``可以直接得到文件扩展名
+```python
+>>> os.path.splitext('/path/to/file.txt')
+('/path/to/file', '.txt')
+```
+```python
+# 对文件重命名:
+>>> os.rename('test.txt', 'test.py')
+# 删掉文件:
+>>> os.remove('test.py')
+```
+* 复制函数可以使用``shutil``模块的``copyfile()``函数
+```python
+# 列出当前目录下的所有目录
+>>> [x for x in os.listdir('.') if os.path.isdir(x)]
+['.lein', '.local', '.m2', '.npm', '.ssh', '.Trash', '.vim', 'Applications', 'Desktop', ...]
+```
+## 4. 序列化
+* 变量从内存中变成可存储或传输的过程称之为序列化（pickling）
+* 把变量内容从序列化的对象重新读到内存里称之为反序列化，即unpickling
+* ``pickle``模块的``pickle.dumps(obj)``方法把任意对象序列化成一个 bytes
+* ``pickle.dump(object, file)``直接写入到一个 file-like Object
+* ``pickle.loads()``反序列化对象，``pickle.load(file)``从 file-like Object 中反序列化
+* ``json``模块
+* 如果需要序列化一个对象，在对象中写一个方法 function，使用``json.dumps(obj, default=function)``即可。或者``json.dumps(s, default=lambda obj: obj.__dict__)``
+* 反序列化时，同样加上``object_hook``函数即可。``json.loads(json_str, object_hook=dict2student)``
+* 如果ensure_ascii为True(默认值)，则输出保证将所有输入的非ASCII字符转义。如果确保ensure_ascii为False，这些字符将原样输出
+
+# 十、进程和线程
+* 线程是最小的执行单元，而进城由至少一个线程组成
+## 1. 多进程
+* ``fork()``
+* ``multiprocessing``模块
+```python
+from multiprocessing import Process
+import os
+
+# 子进程要执行的代码
+def run_proc(name):
+    print('Run child process %s (%s)...' % (name, os.getpid()))
+
+if __name__=='__main__':
+    print('Parent process %s.' % os.getpid())
+    p = Process(target=run_proc, args=('test',))
+    print('Child process will start.')
+    p.start()
+    p.join()
+    print('Child process end.')
+```
+执行结果
+```python
+Parent process 928.
+Process will start.
+Run child process test (929)...
+Process end.
+```
+* ``Pool``对象
+* ``subprocess``模块创建子进程
+## 2. 多线程
+* ``threading``模块。``current_thread()``返回当前线程的实例
+* 多进程变量各自拷贝一份，互不影响；多线程之间共享变量
+* 通过``threading.Lock()``创建锁来解决多线程之间的共享变量问题
+```python
+balance = 0
+lock = threading.Lock()
+
+def run_thread(n):
+    for i in range(100000):
+        # 先要获取锁:
+        lock.acquire()
+        try:
+            # 放心地改吧:
+            change_it(n)
+        finally:
+            # 改完了一定要释放锁:
+            lock.release()
+```
+* 解释器的``GIL``全局锁导致即使100个线程跑在100核CPU上，也只能用到1个核
+## 3. ThreadLocal
+* 用一个全局 dict 存放所有的线程需要传递的参数，然后以 thread 自身作为 key 获得线程对应的参数
+```python
+global_dict = {}
+
+def std_thread(name):
+    std = Student(name)
+    # 把std放到全局变量global_dict中：
+    global_dict[threading.current_thread()] = std
+    do_task_1()
+    do_task_2()
+
+def do_task_1():
+    # 不传入std，而是根据当前线程查找：
+    std = global_dict[threading.current_thread()]
+    ...
+
+def do_task_2():
+    # 任何函数都可以查找出当前线程的std变量：
+    std = global_dict[threading.current_thread()]
+    ...
+```
+* ``ThreadLocal``对象
+## 4. 进程 vs. 线程
+* 多任务，设计 Master-Worker 模式，Master 负责分配任务（一个），Worker 负责执行任务（多个）
+* 多进程模式稳定性高，开销大（最早的Apache）
+* 多线程任何一个线程挂掉都可能导致进程挂掉，效率比多进程高（IIS 服务器）
+* IIS 和 Apache 现在又有多进程+多线程的混合模式
+* 线程切换（多进程或者多线程之间进行切换，也是需要耗时的，多任务一旦多了，就会消耗掉所有系统资源，什么事也做不了）
+* 计算密集型和 IO 密集型
+* 计算密集型需要消耗的 CPU 资源较多，计算密集型任务同时进行的数量应当等于 CPU 的核心数
+* Python 运行效率低，不适合做计算密集型的任务
+* IO 密集型任务越多，CPU 效率越高，99%的时间都花在 IO 上
+* 异步 IO（Nginx 是支持异步 IO 的服务器）。事件驱动模型
+## 5. 分布式进程
+# 十一、正则表达式
+* ``re``模块，``re.match(r'正则表达式', str)``方法进行匹配，成功返回一个 Match 对象，否则返回 None
+* ``re.split(r'正则表达式', str)``切割字符串
+* 使用``()``进行分组，在``Match``对象上使用``group(0)``方法，获取原始字符串，后面一次1,2...获取第1,2...个子串
+* 默认是贪婪匹配，后面加一个``?``表示非贪婪匹配
+```python
+>>> re.match(r'^(\d+?)(0*)$', '102300').groups()
+('1023', '00')
+```
+* 如果一个正则表达式会多次去匹配，建议先预编译，后面就不会再进行正则表达式的编译了，而直接进行匹配
+```python
+>>> import re
+# 编译:
+>>> re_telephone = re.compile(r'^(\d{3})-(\d{3,8})$')
+# 使用：
+>>> re_telephone.match('010-12345').groups()
+('010', '12345')
+>>> re_telephone.match('010-8086').groups()
+('010', '8086')
+```
+
+# 十二、常用内建模块
+## 1. datetime
+* 处理日期和时间的标准库
+* ``datetime.now()``获取当前的datetime，``2015-05-18 16:28:07.198690``
+* 获取指定的时间
+```python
+>>> from datetime import datetime
+>>> dt = datetime(2015, 4, 19, 12, 20) # 用指定日期时间创建datetime
+>>> print(dt)
+2015-04-19 12:20:00
+```
+* 转换为时间戳，timestamp 是一个浮点数。如果有小数位，小数位表示毫秒数。
+```python
+>>> from datetime import datetime
+>>> dt = datetime(2015, 4, 19, 12, 20) # 用指定日期时间创建datetime
+>>> dt.timestamp() # 把datetime转换为timestamp
+1429417200.0
+```
+* 时间戳转换为 datetime
+```python
+>>> from datetime import datetime
+>>> t = 1429417200.0
+>>> print(datetime.fromtimestamp(t))
+2015-04-19 12:20:00
+```
+* ``datetime.utcfromtimestamp(t)``直接转换到 UTC 标准时区的时间
+* str 转换成 datetime
+```python
+>>> from datetime import datetime
+>>> cday = datetime.strptime('2015-6-1 18:19:59', '%Y-%m-%d %H:%M:%S')
+>>> print(cday)
+2015-06-01 18:19:59
+```
+* datetime 转换为 str
+```python
+>>> from datetime import datetime
+>>> now = datetime.now()
+>>> print(now.strftime('%a, %b %d %H:%M'))
+Mon, May 05 16:28
+```
+* 对 datetime 进行 ``+``，``-``运算符操作
+```python
+>>> from datetime import datetime, timedelta
+>>> now = datetime.now()
+>>> now
+datetime.datetime(2015, 5, 18, 16, 57, 3, 540997)
+>>> now + timedelta(hours=10)
+datetime.datetime(2015, 5, 19, 2, 57, 3, 540997)
+>>> now - timedelta(days=1)
+datetime.datetime(2015, 5, 17, 16, 57, 3, 540997)
+>>> now + timedelta(days=2, hours=12)
+datetime.datetime(2015, 5, 21, 4, 57, 3, 540997)
+```
+* datetime 类型的属性``tzinfo``，用来设置时区
+* 时区转换
+## 2. collections
+* 
